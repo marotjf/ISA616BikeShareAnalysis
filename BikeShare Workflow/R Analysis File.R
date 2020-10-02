@@ -38,4 +38,13 @@ skim(bikeshare)
 
 source('data summary.R')
 data.summary(bikeshare)
-)
+
+
+
+#PREPROCESSING STEPS
+
+#Creating Dummies for Factors
+dum<-as.data.frame(model.matrix(~0+bikeshare$season))
+
+colnames(dum)<-c("spring", "summer", "fall", "winter")
+head(dum)

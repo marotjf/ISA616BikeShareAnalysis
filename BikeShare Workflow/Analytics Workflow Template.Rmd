@@ -22,17 +22,73 @@ Summary includes an overiew of the analysis and necessary references.
 ### For the second leg (How many bikes to put out each day to ease maintenance)
 * multiple regression on number of riders at a given date/time
 
-```{r}
+```{r, echo=FALSE}
+## Manage Packages
+if(require(pacman)==FALSE) install.packages("pacman")
+pacman::p_load(readxl,fpp2,ggplot2,scales,dplyr, skimr, DataExplorer)
+```
+
+```{r, echo=FALSE}
+#Reading in data
 setwd("M:/ISA 616/ISA616BikeShareAnalysis/BikeShare Workflow")
 bikeshare <- read.csv("Bike Share Data.csv", stringsAsFactors = TRUE)
+
+#Splitting date and time column into a separate date column and numeric time column
+bikeshare$Date <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 1)
+bikeshare$Time <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 2)
+bikeshare$Date <- as.Date(bikeshare$datetime)
+bikeshare$Time <- as.factor(bikeshare$Time)
+bikeshare$Time <- as.numeric(bikeshare$Time)
+
+#recoding other variables as factors 
+bikeshare$season <- factor(bikeshare$season)
+bikeshare$holiday <- factor(bikeshare$holiday)
+bikeshare$workingday <- factor(bikeshare$workingday)
+bikeshare$weather <- factor(bikeshare$weather)
+
+#Removing original datetime column
+library(dplyr)
+bikeshare<-select(bikeshare, -datetime)
 ```
 
 # Data Description
-Summary includes a complete description of the dat
-```{r}
+
+The source of this data set is the Capital BikeShare system which tracks bike sharing programs and includes relevant attributes such as seasonal and weather information and membership level. The data analyzed includes the total count of riders by hour and day, along with these additional attributes for bike rentals between the years 2011 and 2012.
+
+* **Number of Observations:** _10,886_
+
+*	**season:**
+    + 1 = spring 
+    + 2 = summer 
+    + 3 = fall
+    + 4 = winter. Categorical
+*	**holiday:** whether the day is considered a holiday. Categorical. 2 levels
+*	**workingday:** whether the day is neither a weekend nor holiday Categorical. 2 levels
+*	**weather:** 
+    + 1 = Clear, Few clouds, Partly cloudy, Partly cloudy 
+    + 2 = Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist 
+    + 3 = Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+    + 4 = winter. Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+
+*	**temp:** temperature in Celsius numerical
+*	**atemp:** "feels like" temperature in Celsius numerical
+*	**humidity:** relative humidity numerical
+*	**windspeed:** wind speed numerical
+*	**casual:** number of non-registered user rentals initiated numerical
+*	**registered:** number of registered user rentals initiated
+*	**count:** number of total rentals (Note that casual+registered=count, so you shouldn’t use casual and registered to predict count. I have included the breakdown in case you wish to predict casual and registered with separate models.)
+*	**date:** the current day, formatted as a date.
+*	**time:** the current time (in hours) numerical
+
+```{R} 
+#DATA DESCRIPTION Code
+source('data summary.R')
+data.summary(bikeshare)
+
+head(bikeshare)
+tail(bikeshare)
 
 ```
-
 # Preprocessing
 Details on data preprocessing are provided
 ```{R}

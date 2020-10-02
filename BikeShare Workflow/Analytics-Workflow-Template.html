@@ -385,7 +385,82 @@ summary {
 </div>
 <div id="data-description" class="section level1">
 <h1>Data Description</h1>
-<p>Summary includes a complete description of the dat</p>
+<p>The source of this data set is the Capital BikeShare system which tracks bike sharing programs and includes relevant attributes such as seasonal and weather information and membership level. The data analyzed includes the total count of riders by hour and day, along with these additional attributes for bike rentals between the years 2011 and 2012.</p>
+<ul>
+<li><p><strong>Number of Observations:</strong> <em>10,886</em></p></li>
+<li><p><strong>season:</strong></p>
+<ul>
+<li>1 = spring</li>
+<li>2 = summer</li>
+<li>3 = fall</li>
+<li>4 = winter. Categorical</li>
+</ul></li>
+<li><p><strong>holiday:</strong> whether the day is considered a holiday. Categorical. 2 levels</p></li>
+<li><p><strong>workingday:</strong> whether the day is neither a weekend nor holiday Categorical. 2 levels</p></li>
+<li><p><strong>weather:</strong></p>
+<ul>
+<li>1 = Clear, Few clouds, Partly cloudy, Partly cloudy</li>
+<li>2 = Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist</li>
+<li>3 = Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds</li>
+<li>4 = winter. Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds</li>
+</ul></li>
+<li><p><strong>temp:</strong> temperature in Celsius numerical</p></li>
+<li><p><strong>atemp:</strong> “feels like” temperature in Celsius numerical</p></li>
+<li><p><strong>humidity:</strong> relative humidity numerical</p></li>
+<li><p><strong>windspeed:</strong> wind speed numerical</p></li>
+<li><p><strong>casual:</strong> number of non-registered user rentals initiated numerical</p></li>
+<li><p><strong>registered:</strong> number of registered user rentals initiated</p></li>
+<li><p><strong>count:</strong> number of total rentals (Note that casual+registered=count, so you shouldn’t use casual and registered to predict count. I have included the breakdown in case you wish to predict casual and registered with separate models.)</p></li>
+<li><p><strong>date:</strong> the current day, formatted as a date.</p></li>
+<li><p><strong>time:</strong> the current time (in hours) numerical</p></li>
+</ul>
+<pre class="r"><code>#DATA DESCRIPTION Code
+source(&#39;data summary.R&#39;)
+data.summary(bikeshare)</code></pre>
+<pre><code>##                 mean         sd  min      max  median length missing
+## temp        20.23086   7.791590 0.82  41.0000  20.500  10886       0
+## atemp       23.65508   8.474601 0.76  45.4550  24.240  10886       0
+## humidity    61.88646  19.245033 0.00 100.0000  62.000  10886       0
+## windspeed   12.79940   8.164537 0.00  56.9969  12.998  10886       0
+## casual      36.02195  49.960477 0.00 367.0000  17.000  10886       0
+## registered 155.55218 151.039033 0.00 886.0000 118.000  10886       0
+## count      191.57413 181.144454 1.00 977.0000 145.000  10886       0
+## Time        12.47786   6.924756 1.00  24.0000  12.000  10886       0
+##            levels mode missing
+## season          4    4       0
+## holiday         2    0       0
+## workingday      2    1       0
+## weather         4    1       0</code></pre>
+<pre class="r"><code>head(bikeshare)</code></pre>
+<pre><code>##   season holiday workingday weather temp  atemp humidity windspeed casual
+## 1      1       0          0       1 9.84 14.395       81    0.0000      3
+## 2      1       0          0       1 9.02 13.635       80    0.0000      8
+## 3      1       0          0       1 9.02 13.635       80    0.0000      5
+## 4      1       0          0       1 9.84 14.395       75    0.0000      3
+## 5      1       0          0       1 9.84 14.395       75    0.0000      0
+## 6      1       0          0       2 9.84 12.880       75    6.0032      0
+##   registered count       Date Time
+## 1         13    16 0001-01-20    1
+## 2         32    40 0001-01-20    2
+## 3         27    32 0001-01-20   13
+## 4         10    13 0001-01-20   18
+## 5          1     1 0001-01-20   19
+## 6          1     1 0001-01-20   20</code></pre>
+<pre class="r"><code>tail(bikeshare)</code></pre>
+<pre><code>##       season holiday workingday weather  temp  atemp humidity windspeed casual
+## 10881      4       0          1       1 15.58 19.695       50   23.9994     23
+## 10882      4       0          1       1 15.58 19.695       50   26.0027      7
+## 10883      4       0          1       1 14.76 17.425       57   15.0013     10
+## 10884      4       0          1       1 13.94 15.910       61   15.0013      4
+## 10885      4       0          1       1 13.94 17.425       61    6.0032     12
+## 10886      4       0          1       1 13.12 16.665       66    8.9981      4
+##       registered count Date Time
+## 10881        546   569 &lt;NA&gt;   11
+## 10882        329   336 &lt;NA&gt;   12
+## 10883        231   241 &lt;NA&gt;   14
+## 10884        164   168 &lt;NA&gt;   15
+## 10885        117   129 &lt;NA&gt;   16
+## 10886         84    88 &lt;NA&gt;   17</code></pre>
 </div>
 <div id="preprocessing" class="section level1">
 <h1>Preprocessing</h1>
