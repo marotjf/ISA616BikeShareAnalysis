@@ -15,8 +15,16 @@ knitr::opts_chunk$set(echo = TRUE,
 
 Summary includes an overiew of the analysis and necessary references.
 
-```{r}
+### For the first leg of value proposition (when to advertise, registered v casual)
+* Classification analysis for which days attract most riders
+* drill down on whether these are casual or registered riders
 
+### For the second leg (How many bikes to put out each day to ease maintenance)
+* multiple regression on number of riders at a given date/time
+
+```{r}
+setwd("M:/ISA 616/ISA616BikeShareAnalysis/BikeShare Workflow")
+bikeshare <- read.csv("Bike Share Data.csv", stringsAsFactors = TRUE)
 ```
 
 # Data Description
