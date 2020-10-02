@@ -36,7 +36,8 @@ bikeshare <- read.csv("Bike Share Data.csv", stringsAsFactors = TRUE)
 #Splitting date and time column into a separate date column and numeric time column
 bikeshare$Date <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 1)
 bikeshare$Time <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 2)
-bikeshare$Date <- as.Date(bikeshare$datetime)
+bikeshare$Time <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 2)
+bikeshare$Date <- as.Date(bikeshare$datetime,format='%m/%d/%Y')
 bikeshare$Time <- as.factor(bikeshare$Time)
 bikeshare$Time <- as.numeric(bikeshare$Time)
 
@@ -68,7 +69,7 @@ The source of this data set is the Capital BikeShare system which tracks bike sh
     + 1 = Clear, Few clouds, Partly cloudy, Partly cloudy 
     + 2 = Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist 
     + 3 = Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
-    + 4 = winter. Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+    + 4 = Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog 
 
 *	**temp:** temperature in Celsius numerical
 *	**atemp:** "feels like" temperature in Celsius numerical
@@ -90,8 +91,30 @@ tail(bikeshare)
 
 ```
 # Preprocessing
-Details on data preprocessing are provided
-```{R}
+
+
+* Details on data preprocessing are provided
+* Feauture Generation: talk about creating dummies for multi level factors
+* Imputation: No imputation because no missing values
+* Outlier Removal: did not remove outliers yet (3% of data) because it is in second half of year, decent amount 
+* Cleaning or merging of categories: had to split the date and time column earlier
+* Anything that changes original form
+
+
+```{R, echo=FALSE}
+#Creating Dummy variables for multilevel Factors
+
+dum<-as.data.frame(model.matrix(~0+bikeshare$season))
+colnames(dum)<-c("spring", "summer", "fall", "winter")
+bikeshare<-cbind(bikeshare, dum[,-1])
+
+
+dum4<-as.data.frame(model.matrix(~0+bikeshare$weather))
+colnames(dum4)<-c("Clear", "Mist", "Light Snow/Rain", "Heavy Rain/Snow")
+bikeshare<-cbind(bikeshare, dum4[,-1])
+
+bikeshare<-select(bikeshare, -season)
+bikeshare<-select(bikeshare, -weather)
 
 ```
 
