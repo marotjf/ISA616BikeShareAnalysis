@@ -1,8 +1,13 @@
 ---
 title: "Analytics Workflow for BikeShare"
+author: "John Marot"
 output:
   html_document: default
   word_document: default
+  toc: TRUE
+  toc_float: TRUE
+  number_sections: FALSE
+  code_folding: hide
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,

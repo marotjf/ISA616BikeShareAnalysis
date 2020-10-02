@@ -9,6 +9,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
+<meta name="author" content="John Marot" />
 
 
 <title>Analytics Workflow for BikeShare</title>
@@ -362,6 +363,7 @@ summary {
 
 
 <h1 class="title toc-ignore">Analytics Workflow for BikeShare</h1>
+<h4 class="author">John Marot</h4>
 
 </div>
 
@@ -402,7 +404,7 @@ summary {
 <li>1 = Clear, Few clouds, Partly cloudy, Partly cloudy</li>
 <li>2 = Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist</li>
 <li>3 = Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds</li>
-<li>4 = winter. Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds</li>
+<li>4 = Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog</li>
 </ul></li>
 <li><p><strong>temp:</strong> temperature in Celsius numerical</p></li>
 <li><p><strong>atemp:</strong> “feels like” temperature in Celsius numerical</p></li>
@@ -464,7 +466,14 @@ data.summary(bikeshare)</code></pre>
 </div>
 <div id="preprocessing" class="section level1">
 <h1>Preprocessing</h1>
-<p>Details on data preprocessing are provided</p>
+<ul>
+<li>Details on data preprocessing are provided</li>
+<li>Feauture Generation: talk about creating dummies for multi level factors</li>
+<li>Imputation: No imputation because no missing values</li>
+<li>Outlier Removal: did not remove outliers yet (3% of data) because it is in second half of year, decent amount</li>
+<li>Cleaning or merging of categories: had to split the date and time column earlier</li>
+<li>Anything that changes original form</li>
+</ul>
 </div>
 <div id="model-selection-and-output" class="section level1">
 <h1>Model Selection and Output</h1>
