@@ -125,9 +125,176 @@ bikeshare<-select(bikeshare, -weather)
 
 # Model Selection and Output
 
+The first part of the analysis and model selection involved multiple regression analysis. This analysis was done so that the DownTown BikeSharing Company could more accurately predict the number of riders per day.
 
 ```{r}
+#split into testing and validation
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+head(trainIndex, 10)
 
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+
+```
+
+```{r}
+# Analysis of Total Count of Riders
+#For this analysis we are looking at overall count. Therefore we need to take casual and registered out of the data frame for the analysis because count is the sum of these variables
+
+bikeshare.train<-select(bikeshare.train, -registered)
+bikeshare.train<-select(bikeshare.train, -casual)
+bikeshare.valid<-select(bikeshare.valid, -registered)
+bikeshare.valid<-select(bikeshare.valid, -casual)
+
+#first fitting model with all variables entered. Needed to write it out long ways because cannot include registered and casual when predicting count
+full<-lm(count~.,data=bikeshare.train)
+
+
+#Next use stepwise function to create multiple regression for total Count
+null<-lm(bikeshare.train$count~1, data=bikeshare.train)
+lm.step<-step(null, scope=list(lower=null, upper=full), direction="both", trace=0)#trace=0 suppresses output.  Change trace=1 or 2 to get more
+summary(lm.step)
+
+#Evaluate Stepwise Multiple Regression Model for Total Count
+library(forecast)
+p.full<-predict(full, newdata=bikeshare.valid)
+p.step<-predict(lm.step, newdata=bikeshare.valid)
+head(p.full)
+
+
+accuracy(p.step, bikeshare.valid$count)
+
+```
+
+
+```{r}
+#Analysis for Registered Riders
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+head(trainIndex, 10)
+
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+nrow(bikeshare.train)
+
+bikeshare.train<-select(bikeshare.train, -count)
+bikeshare.valid<-select(bikeshare.valid, -count)
+
+full<-lm(registered~.,data=bikeshare.train)
+
+summary(full)
+
+null<-lm(bikeshare.train$registered~1, data=bikeshare.train)
+lm.step<-step(null, scope=list(lower=null, upper=full), direction="both", trace=0)#trace=0 suppresses output.  Change trace=1 or 2 to get more
+summary(lm.step)
+
+#Evaluate Model
+
+library(forecast)
+p.full<-predict(full, newdata=bikeshare.valid)
+p.step<-predict(lm.step, newdata=bikeshare.valid)
+head(p.full)
+
+
+accuracy(p.step, bikeshare.valid$registered)
+
+```
+
+```{r}
+#Analysis for to predict # of casual riders
+
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+head(trainIndex, 10)
+
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+nrow(bikeshare.train)
+
+bikeshare.train<-select(bikeshare.train, -count)
+bikeshare.valid<-select(bikeshare.valid, -count)
+
+full<-lm(casual~.,data=bikeshare.train)
+
+summary(full)
+
+null<-lm(bikeshare.train$casual~1, data=bikeshare.train)
+lm.step<-step(null, scope=list(lower=null, upper=full), direction="both", trace=0)#trace=0 suppresses output.  Change trace=1 or 2 to get more
+summary(lm.step)
+
+#Evaluate Model
+
+library(forecast)
+p.full<-predict(full, newdata=bikeshare.valid)
+p.step<-predict(lm.step, newdata=bikeshare.valid)
+head(p.full)
+
+
+accuracy(p.step, bikeshare.valid$casual)
+
+```
+
+
+```{r}
+#Regression Tree Analysis for When to advertise to casual riders
+
+#split into testing and validation
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+head(trainIndex, 10)
+
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+nrow(bikeshare.train)
+
+
+bikeshare.train<-select(bikeshare.train, -count)
+bikeshare.valid<-select(bikeshare.valid, -count)
+
+#USING Denver B-Cycle for Money related analysis for the classification analysis
+#about $1.50 in costs per trip
+#Avg trips per annual member
+#best days for casual riders to be out, so that you can send them promos to become registered member
+library(rsample)     # data splitting 
+library(dplyr)       # data wrangling
+library(rpart)       # performing regression trees
+library(rpart.plot)  # plotting regression trees
+library(ipred)       # bagging
+library(caret)       # bagging
+
+m1 <- rpart(
+  formula = casual ~ holiday + workingday + temp + humidity + windspeed + summer + fall + winter, 
+  data    = bikeshare.train,
+  method  = "anova"
+)
+rpart.plot(m1)
+
+# Specify 10-fold cross validation
+ctrl <- trainControl(method = "cv",  number = 10) 
+
+# CV bagged model
+bagged_cv <- train(
+  casual ~ holiday + workingday + temp + humidity + windspeed + summer + fall + winter,
+  data = bikeshare.train,
+  method = "treebag",
+  trControl = ctrl,
+  importance = TRUE
+)
+
+# assess results
+bagged_cv
+
+
+# plot most important variables
+plot(varImp(bagged_cv), 20)  
+
+pred <- predict(bagged_cv, bikeshare.valid)
+RMSE(pred, bikeshare.valid$casual)
+#34.28095
+
+#if temp >23, it is a workingday, and humidity is less than or equal to 56
+#even if humidity is less than 71 still have avg of 91 riders
 ```
 # Justification of anaysis
 
