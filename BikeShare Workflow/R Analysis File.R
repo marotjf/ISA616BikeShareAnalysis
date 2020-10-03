@@ -8,9 +8,10 @@ setwd("M:/ISA 616/ISA616BikeShareAnalysis/BikeShare Workflow")
 bikeshare <- read.csv("Bike Share Data.csv", stringsAsFactors = TRUE)
 
 
+###############################################################################################
+
 #Data Description Code
 
-str(bikeshare)
 
 #Splitting date and time column into a separate date column and numeric time column
 
@@ -21,7 +22,7 @@ bikeshare$Time <- as.factor(bikeshare$Time)
 bikeshare$Time <- as.numeric(bikeshare$Time)
 
 #recoding other variables as factors 
-bikeshare$season <- factor(bikeshare$season)
+bikeshare$quarter <- factor(bikeshare$season)
 bikeshare$holiday <- factor(bikeshare$holiday)
 bikeshare$workingday <- factor(bikeshare$workingday)
 bikeshare$weather <- factor(bikeshare$weather)
@@ -29,32 +30,31 @@ bikeshare$weather <- factor(bikeshare$weather)
 #Removing original datetime column
 library(dplyr)
 bikeshare<-select(bikeshare, -datetime)
+bikeshare<-select(bikeshare, -season)
+
+str(bikeshare)
 
 
-#str(bikeshare)
+source('data summary.R')
+data.summary(bikeshare)
 
-
-
-#source('data summary.R')
-#data.summary(bikeshare)
-
-
+#################################################################################
 
 #PREPROCESSING STEPS
 
 #Creating Dummies for Factors
 
-dum<-as.data.frame(model.matrix(~0+bikeshare$season))
-colnames(dum)<-c("spring", "summer", "fall", "winter")
+dum<-as.data.frame(model.matrix(~0+bikeshare$quarter))
+colnames(dum)<-c("1Q", "2Q", "3Q", "4Q")
 bikeshare<-cbind(bikeshare, dum[,-1])
-#Possibly remove seasonal attribute
+
 
 
 dum1<-as.data.frame(model.matrix(~0+bikeshare$weather))
 colnames(dum1)<-c("Clear", "Mist", "Light_SnowRain", "Heavy_SnowRain")
 bikeshare<-cbind(bikeshare, dum1[,-1])
 
-bikeshare<-select(bikeshare, -season)
+bikeshare<-select(bikeshare, -quarter)
 bikeshare<-select(bikeshare, -weather)
 
 
@@ -77,6 +77,7 @@ M<-cor(bikeshare[,nums], use="complete.obs")
 corrplot(M, method="circle")
 
 
+
 #BEGINNNING OF Analysis - Splitting into Training and Validation -Predicting Full Count
 
 #split into testing and validation
@@ -88,7 +89,7 @@ bikeshare.train<-bikeshare[trainIndex, ]
 bikeshare.valid<-bikeshare[-trainIndex, ]
 nrow(bikeshare.train)
 
-
+sstr(bikeshare.train)
 #For this analysis we are looking at overall count. Therefore we need to take casual and registered out of the data frame for the analysis because count is the sum of these variables
 bikeshare.train<-select(bikeshare.train, -registered)
 bikeshare.train<-select(bikeshare.train, -casual)
@@ -96,12 +97,10 @@ bikeshare.train<-select(bikeshare.train, -casual)
 bikeshare.valid<-select(bikeshare.valid, -registered)
 bikeshare.valid<-select(bikeshare.valid, -casual)
 
-#???Deseasonalizing DatA???
-
 
 
 #first fitting model with all variables entered. Needed to write it out long ways because cannot include registered and casual when predicting count
-full<-lm(count~.,data=bikeshare.train)
+full<-lm(count~ holiday+ workingday+ temp +atemp + humidity+ windspeed+Clear+Mist+Light_SnowRain+Heavy_SnowRain,data=bikeshare.train)
 
 summary(full)
 
@@ -190,7 +189,8 @@ accuracy(p.step, bikeshare.valid$casual)
 
 ###############################################################
 
-#Performing classification analysis using a decision tree
+#Regression Tree Analysis
+
 #split into testing and validation
 set.seed(13)
 trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
@@ -204,9 +204,7 @@ nrow(bikeshare.train)
 bikeshare.train<-select(bikeshare.train, -count)
 bikeshare.valid<-select(bikeshare.valid, -count)
 
-#USING Denver B-Cycle for Money related analysis for the classification analysis
-#about $1.50 in costs per trip
-#Avg trips per annual member
+
 #best days for casual riders to be out, so that you can send them promos to become registered member
 library(rsample)     # data splitting 
 library(dplyr)       # data wrangling

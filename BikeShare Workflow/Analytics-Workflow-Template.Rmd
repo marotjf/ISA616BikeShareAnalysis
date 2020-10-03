@@ -1,0 +1,443 @@
+---
+title: "Analytics Workflow for BikeShare"
+author: "John Marot"
+output:
+  html_document: default
+  word_document: default
+  toc: TRUE
+  toc_float: TRUE
+  number_sections: FALSE
+  code_folding: hide
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE, 
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+## Overview
+
+Within this document I will detail the process of how I developed two different models to help DownTown BikeSharing LLC. predict bike rentals on a daily basis. After I summarize the data and detail the pre-processing steps, I will delve into the models built, the output, and conclusions.
+
+The first part of the analysis includes multiple regression analysis. Due to maintenance costs and risk mitigation, it is advantageous for Downtown BikeSharing to better the predict the necessary amount of bikes to make available each day. Additionally, Downtown BikeSharing's marketing team is attempting to transform more casual riders into registered riders due to the high profitability and retention rate within the membership program. In order to do so, they have increased the marketing budget in terms of advertising towards casual riders. To assist in this effort, I developed a regression tree analysis using array of variables within the data set. This will allow for the marketing team to understand which days attract the most casual riders and to factor this into their marketing plan. I will provide more detail later in the analysis regarding the results of these analyses and their potential effects on DownTown BikeShare. 
+
+
+### Package Management and Loading Data
+The below code includes package management using pacman. If packman is necessary, it will load all the required packages to their version when used before a possible package update. 
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+#Manage Packages
+if(require(pacman)==FALSE) install.packages("pacman")
+pacman::p_load(readxl,fpp2,ggplot2,scales,dplyr, forecast, rsample, rpart, rpart.plot, ipred, caret )
+
+#Reading in data
+setwd("M:/ISA 616/ISA616BikeShareAnalysis/BikeShare Workflow")
+bikeshare <- read.csv("Bike Share Data.csv", stringsAsFactors = TRUE)
+```
+
+```{r, echo=FALSE}
+
+bikeshare$Date <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 1)
+bikeshare$Time <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 2)
+bikeshare$Date <- as.Date(bikeshare$datetime,format='%m/%d/%Y')
+bikeshare$Time <- as.factor(bikeshare$Time)
+bikeshare$Time <- as.numeric(bikeshare$Time)
+
+#recoding other variables as factors 
+bikeshare$quarter <- factor(bikeshare$season)
+bikeshare$holiday <- factor(bikeshare$holiday)
+bikeshare$workingday <- factor(bikeshare$workingday)
+bikeshare$weather <- factor(bikeshare$weather)
+
+#Removing original datetime column
+library(dplyr)
+bikeshare<-select(bikeshare, -datetime)
+bikeshare<-select(bikeshare, -season)
+```
+
+# Data Description
+
+The source of this data set is the Capital BikeShare system which tracks over 500 different bike sharing programs and includes relevant attributes such as seasonal and weather information and membership status of riders. The data analyzed includes the total count of riders by hour and day, along with these additional attributes for bike rentals between the years 2011 and 2012.
+
+* **Number of Observations:** _10,886_
+* **Missing Observations:** _0_
+
+### Variables:
+
+*	**season:**
+    + 1 = spring 
+    + 2 = summer 
+    + 3 = fall
+    + 4 = winter. Categorical. 4 levels
+*	**holiday:** whether the day is considered a holiday. Categorical. 2 levels
+*	**workingday:** whether the day is neither a weekend nor holiday. Categorical. 2 levels
+*	**weather:** 
+    + 1 = Clear, Few clouds, Partly cloudy, Partly cloudy 
+    + 2 = Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist 
+    + 3 = Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+    + 4 = Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog. Categorical. 4 levels
+
+*	**temp:** temperature in Celsius. Numerical
+*	**atemp:** "feels like" temperature in Celsius. Numerical
+*	**humidity:** relative humidity. Numerical
+*	**windspeed:** wind speed. Numerical
+*	**casual:** number of non-registered user rentals initiated. Numerical
+*	**registered:** number of registered user rentals initiated. Numerical
+*	**count:** number of total rentals (Note that casual+registered=count, so you shouldn’t use casual and registered to predict count. I have included the breakdown in case you wish to predict casual and registered with separate models.) Numerical
+*	**date:** the current day, formatted as a date.
+*	**time:** the current time (in hours). Numerical
+
+
+The following code includes a call for a data summary function as well as the head and tail of the data set.
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{R} 
+#DATA DESCRIPTION Code
+#Calling data summary function that is within the github.
+source('data summary.R')
+data.summary(bikeshare)
+
+head(bikeshare)
+tail(bikeshare)
+
+```
+
+# Preprocessing
+
+Within the pre-processing phase, there was feature generation for a couple multilevel factors including season and weather. This step will now allow for these factors to be treated as numerical values and can therefore be included in the multiple regression. In addition, it was not noted before but there was some previous pre-processing done with the date and time column. In the original data file there is a datetime attribute. To allow for better modeling I split these into two separate columns and deleted the original datetime attribute. The code for this step was included in previous steps so that the data summary would be more accurate. Additionally, I defined one of the original attributes, season, becasue it included misleading values that didn't line up to the seasons but instead to quarters of the year.
+
+In terms of outlier removal, 3% of the observations were outliers. The outliers do not appear to be incorrectly measured data and do not affect model assumptions. Because of the relevance and variance provided from these observations I have decided to not eliminate the outliers.  
+
+
+I have included in the code below the steps I took to create dummy variables for the multilevel factors. 
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{R}
+
+#Creating Dummy variables for multilevel Factors
+
+dum<-as.data.frame(model.matrix(~0+bikeshare$quarter))
+colnames(dum)<-c("1Q", "2Q", "3Q", "4Q")
+bikeshare<-cbind(bikeshare, dum[,-1])
+
+
+
+dum1<-as.data.frame(model.matrix(~0+bikeshare$weather))
+colnames(dum1)<-c("Clear", "Mist", "Light_SnowRain", "Heavy_SnowRain")
+bikeshare<-cbind(bikeshare, dum1[,-1])
+
+bikeshare<-select(bikeshare, -quarter)
+bikeshare<-select(bikeshare, -weather)
+
+```
+
+# Model Selection and Output
+
+The first part of the model selection involved multiple regression analysis. This analysis was done so that the DownTown BikeSharing Company could more accurately predict the number of riders per day. The goal of this analysis is to provide DownTown BikeSharing with a model that they can utilize to better manage bike placement and maintenance. 
+
+The code below involves setting the seed and splitting the data into the training and validation set. 
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+#split into testing and validation
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+
+```
+
+## Multiple Regression Analysis
+
+### Predicting Total Count of Rentals
+
+The first multiple regression model will be used to predict the overall count of riders, which is the sum of casual and registered rides. Therefore we need to take casual and registered out of the data frame for the analysis because they cannot be predictors for count. In addition to this, the data includes time variables such as date, time, and quarter. However, because of the length of the data it could not apply a time series to these values. Within my analysis I will focus on other variables not related to a time series analysis such as the type of day and other weather characteristics.   
+
+```{r, echo=FALSE}
+bikeshare.train<-select(bikeshare.train, -registered)
+bikeshare.train<-select(bikeshare.train, -casual)
+
+bikeshare.valid<-select(bikeshare.valid, -registered)
+bikeshare.valid<-select(bikeshare.valid, -casual)
+
+```
+
+The below code includes the initial fitting of the model to all the available variables. The step-wise function then executes subsequently, using this full model as its upper range. Finally, the step-wise model outputs the optimal multiple regression equation and the values of the coefficients. 
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+#First fitting model with all variables available in training set
+full<-lm(count~ holiday+ workingday+ temp +atemp + humidity+ windspeed,data=bikeshare.train)
+
+#Next using step-wise function to create multiple regression for total Count
+null<-lm(bikeshare.train$count~1, data=bikeshare.train)
+lm.step<-step(null, scope=list(lower=null, upper=full), direction="both", trace=0)
+
+summary(lm.step)
+```
+
+The code and output below includes key metrics in which to evaluate the model on.
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+#Model Evaluation
+p.full<-predict(full, newdata=bikeshare.valid)
+p.step<-predict(lm.step, newdata=bikeshare.valid)
+
+accuracy(p.step, bikeshare.valid$count)
+
+
+```
+
+### Predicting Count of Registered Rentals
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+#Analysis for Registered Riders
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+
+
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+
+
+bikeshare.train<-select(bikeshare.train, -count)
+bikeshare.valid<-select(bikeshare.valid, -count)
+
+full<-lm(registered~holiday+ workingday+ temp +atemp + humidity+ windspeed,data=bikeshare.train)
+
+
+
+null<-lm(bikeshare.train$registered~1, data=bikeshare.train)
+lm.step<-step(null, scope=list(lower=null, upper=full), direction="both", trace=0)#trace=0 suppresses output.  Change trace=1 or 2 to get more
+summary(lm.step)
+
+```
+
+The code and output below includes key metrics in which to evaluate the model on.
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+#Model Evaluation
+p.full<-predict(full, newdata=bikeshare.valid)
+p.step<-predict(lm.step, newdata=bikeshare.valid)
+
+accuracy(p.step, bikeshare.valid$count)
+
+```
+
+
+### Predicting Count of Casual Rentals
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+
+
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+
+
+bikeshare.train<-select(bikeshare.train, -count)
+bikeshare.valid<-select(bikeshare.valid, -count)
+
+full<-lm(casual~holiday+ workingday+ temp +atemp + humidity+ windspeed,data=bikeshare.train)
+
+
+null<-lm(bikeshare.train$casual~1, data=bikeshare.train)
+lm.step<-step(null, scope=list(lower=null, upper=full), direction="both", trace=0)
+summary(lm.step)
+
+```
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+#Evaluate Model of Casual Count
+
+library(forecast)
+p.full<-predict(full, newdata=bikeshare.valid)
+p.step<-predict(lm.step, newdata=bikeshare.valid)
+
+
+
+accuracy(p.step, bikeshare.valid$casual)
+```
+
+
+
+## Regression Tree Analysis
+
+### Predicting Count of Casual Rentals
+
+
+```{r, echo=FALSE}
+#split into testing and validation
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+head(trainIndex, 10)
+
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+nrow(bikeshare.train)
+
+
+bikeshare.train<-select(bikeshare.train, -count)
+bikeshare.valid<-select(bikeshare.valid, -count)
+
+```
+
+Creating regression tree algorithm.
+
+<style>
+div.hidecode + pre {display: none}
+</style>
+<script>
+doclick=function(e){
+e.nextSibling.nextSibling.style.display="block";
+}
+</script>
+
+<div class="hidecode" onclick="doclick(this);">[**Show Code**]</div>
+```{r}
+
+m1 <- rpart(
+  formula = casual ~ holiday + workingday + temp + humidity + windspeed, 
+  data    = bikeshare.train,
+  method  = "anova"
+)
+rpart.plot(m1)
+```
+
+
+```{r}
+#Validating the regression tree using the cv bagged model
+
+ctrl <- trainControl(method = "cv",  number = 10) 
+
+# CV bagged model
+bagged_cv <- train(
+  casual ~ holiday + workingday + temp + humidity + windspeed,
+  data = bikeshare.train,
+  method = "treebag",
+  trControl = ctrl,
+  importance = TRUE
+)
+
+# assess results
+bagged_cv
+```
+
+```{r}
+# plot most important variables
+plot(varImp(bagged_cv), 20) 
+```
+
+# Conclusion
+
+```{r}
+
+```
+
+## References
+
+```{r}
+
+
+```
+
+
