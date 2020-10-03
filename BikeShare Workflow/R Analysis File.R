@@ -1,6 +1,6 @@
 ## Manage Packages
 if(require(pacman)==FALSE) install.packages("pacman")
-pacman::p_load(readxl,fpp2,ggplot2,scales,dplyr, skimr, DataExplorer,corrplot)
+pacman::p_load(readxl,fpp2,ggplot2,scales,dplyr, skimr, DataExplorer,corrplot, rpart, rpart.plot())
 
 
 #Reading in the data
@@ -50,9 +50,9 @@ bikeshare<-cbind(bikeshare, dum[,-1])
 #Possibly remove seasonal attribute
 
 
-dum4<-as.data.frame(model.matrix(~0+bikeshare$weather))
-colnames(dum4)<-c("Clear", "Mist", "Light_SnowRain", "Heavy_SnowRain")
-bikeshare<-cbind(bikeshare, dum4[,-1])
+dum1<-as.data.frame(model.matrix(~0+bikeshare$weather))
+colnames(dum1)<-c("Clear", "Mist", "Light_SnowRain", "Heavy_SnowRain")
+bikeshare<-cbind(bikeshare, dum1[,-1])
 
 bikeshare<-select(bikeshare, -season)
 bikeshare<-select(bikeshare, -weather)
@@ -190,3 +190,60 @@ accuracy(p.step, bikeshare.valid$casual)
 
 ###############################################################
 
+#Performing classification analysis using a decision tree
+#split into testing and validation
+set.seed(13)
+trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+head(trainIndex, 10)
+
+bikeshare.train<-bikeshare[trainIndex, ]
+bikeshare.valid<-bikeshare[-trainIndex, ]
+nrow(bikeshare.train)
+
+
+bikeshare.train<-select(bikeshare.train, -count)
+bikeshare.valid<-select(bikeshare.valid, -count)
+
+#USING Denver B-Cycle for Money related analysis for the classification analysis
+#about $1.50 in costs per trip
+#Avg trips per annual member
+#best days for casual riders to be out, so that you can send them promos to become registered member
+library(rsample)     # data splitting 
+library(dplyr)       # data wrangling
+library(rpart)       # performing regression trees
+library(rpart.plot)  # plotting regression trees
+library(ipred)       # bagging
+library(caret)       # bagging
+
+m1 <- rpart(
+  formula = casual ~ holiday + workingday + temp + humidity + windspeed + summer + fall + winter, 
+  data    = bikeshare.train,
+  method  = "anova"
+)
+rpart.plot(m1)
+
+# Specify 10-fold cross validation
+ctrl <- trainControl(method = "cv",  number = 10) 
+
+# CV bagged model
+bagged_cv <- train(
+  casual ~ holiday + workingday + temp + humidity + windspeed + summer + fall + winter,
+  data = bikeshare.train,
+  method = "treebag",
+  trControl = ctrl,
+  importance = TRUE
+)
+
+# assess results
+bagged_cv
+
+
+# plot most important variables
+plot(varImp(bagged_cv), 20)  
+
+pred <- predict(bagged_cv, bikeshare.valid)
+RMSE(pred, bikeshare.valid$casual)
+#34.28095
+
+#if temp >23, it is a workingday, and humidity is less than or equal to 56
+#even if humidity is less than 71 still have avg of 91 riders
