@@ -25,7 +25,7 @@ Due to maintenance costs and risk mitigation, it is advantageous for the DTB ope
 
 
 ### Package Management and Loading Data
-The below code contains package management using the library pacman. If pacman is required and is not yet installed, it will install the package. Then by using pacman one can call all the required packages and they will be the same version as used in this analysis. Following this is the code to load the data set. 
+The below code contains package management using the library pacman. If pacman is required and is not yet installed, it will install the package. Then by using pacman one can call all the required packages and they will be the same version as used in this analysis.   
 
 ```{r}
 if(require(pacman)==FALSE) install.packages("pacman")
@@ -63,7 +63,9 @@ The source of this data set is the Capital BikeShare system which tracks over 50
 * **Number of Observations:** _10,886_
 * **Missing Observations:** _0_
 
-### Variables:
+### Variables
+
+*	**datetime:** hourly date + timestamp. Categorical, but will need to be split into two diferent numerical variables
 
 *	**season:**
     + 1 = spring 
@@ -84,21 +86,15 @@ The source of this data set is the Capital BikeShare system which tracks over 50
 *	**windspeed:** wind speed. Numerical
 *	**casual:** number of non-registered user rentals initiated. Numerical
 *	**registered:** number of registered user rentals initiated. Numerical
-*	**count:** number of total rentals (Note that casual+registered=count, so you shouldn’t use casual and registered to predict count. I have included the breakdown in case you wish to predict casual and registered with separate models.) Numerical
-*	**date:** the current day, formatted as a date.
-*	**time:** the current time (in hours). Numerical
+*	**count:** number of total rentals initiated (casual + registered).  Numerical
 
 
 The following code includes a call for a data summary function as well as the head and tail of the data set.
 
 ```{R} 
-#DATA DESCRIPTION Code
-
 #Calling data summary function that is included within the github.
 source('data summary.R')
-
 data.summary(bikeshare)
-
 ```
 
 ##### Head of the data frame: 

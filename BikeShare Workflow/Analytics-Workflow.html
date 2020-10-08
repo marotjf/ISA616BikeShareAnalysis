@@ -4148,7 +4148,7 @@ div.tocify {
 <p>Due to maintenance costs and risk mitigation, it is advantageous for the DTB operations team to better predict the necessary amount of bikes to make available each day. To solve this problem, I utilized multiple regression analysis so that DTB can manage inventory more efficiently. Additionally, DTB’s marketing team is attempting to convert more casual riders into registered riders. Using my model, the marketing team can better predict which days attract the most casual riders and tailor promotions based on this.</p>
 <div id="package-management-and-loading-data" class="section level3">
 <h3>Package Management and Loading Data</h3>
-<p>The below code contains package management using the library pacman. If pacman is required and is not yet installed, it will install the package. Then by using pacman one can call all the required packages and they will be the same version as used in this analysis. Following this is the code to load the data set.</p>
+<p>The below code contains package management using the library pacman. If pacman is required and is not yet installed, it will install the package. Then by using pacman one can call all the required packages and they will be the same version as used in this analysis.</p>
 <pre class="r"><code>if(require(pacman)==FALSE) install.packages(&quot;pacman&quot;)
 pacman::p_load(readxl,fpp2,ggplot2,scales,dplyr, forecast, rsample, rpart, rpart.plot, ipred, caret, DT )
 
@@ -4167,38 +4167,38 @@ bikeshare &lt;- read.csv(&quot;Bike Share Data.csv&quot;, stringsAsFactors = TRU
 <div id="variables" class="section level3">
 <h3>Variables:</h3>
 <ul>
-<li><strong>season:</strong>
+<li><p><strong>datetime:</strong> hourly date + timestamp. Categorical, but will need to be split into two diferent numerical variables</p></li>
+<li><p><strong>season:</strong></p>
 <ul>
 <li>1 = spring</li>
 <li>2 = summer</li>
 <li>3 = fall</li>
 <li>4 = winter. Categorical. 4 levels</li>
 </ul></li>
-<li><strong>holiday:</strong> whether the day is considered a holiday. Categorical. 2 levels</li>
-<li><strong>workingday:</strong> whether the day is neither a weekend nor holiday. Categorical. 2 levels</li>
-<li><strong>weather:</strong>
+<li><p><strong>holiday:</strong> whether the day is considered a holiday. Categorical. 2 levels</p></li>
+<li><p><strong>workingday:</strong> whether the day is neither a weekend nor holiday. Categorical. 2 levels</p></li>
+<li><p><strong>weather:</strong></p>
 <ul>
 <li>1 = Clear, Few clouds, Partly cloudy, Partly cloudy</li>
 <li>2 = Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist</li>
 <li>3 = Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds</li>
 <li>4 = Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog. Categorical. 4 levels</li>
 </ul></li>
-<li><strong>temp:</strong> temperature in Celsius. Numerical</li>
-<li><strong>atemp:</strong> “feels like” temperature in Celsius. Numerical</li>
-<li><strong>humidity:</strong> relative humidity. Numerical</li>
-<li><strong>windspeed:</strong> wind speed. Numerical</li>
-<li><strong>casual:</strong> number of non-registered user rentals initiated. Numerical</li>
-<li><strong>registered:</strong> number of registered user rentals initiated. Numerical</li>
-<li><strong>count:</strong> number of total rentals (Note that casual+registered=count, so you shouldn’t use casual and registered to predict count. I have included the breakdown in case you wish to predict casual and registered with separate models.) Numerical</li>
-<li><strong>date:</strong> the current day, formatted as a date.</li>
-<li><strong>time:</strong> the current time (in hours). Numerical</li>
+<li><p><strong>temp:</strong> temperature in Celsius. Numerical</p></li>
+<li><p><strong>atemp:</strong> “feels like” temperature in Celsius. Numerical</p></li>
+<li><p><strong>humidity:</strong> relative humidity. Numerical</p></li>
+<li><p><strong>windspeed:</strong> wind speed. Numerical</p></li>
+<li><p><strong>casual:</strong> number of non-registered user rentals initiated. Numerical</p></li>
+<li><p><strong>registered:</strong> number of registered user rentals initiated. Numerical</p></li>
+<li><p><strong>count:</strong> number of total rentals (Note that casual+registered=count, so you shouldn’t use casual and registered to predict count. I have included the breakdown in case you wish to predict casual and registered with separate models.) Numerical</p></li>
+<li><p><strong>date:</strong> the current day, formatted as a date.</p></li>
+<li><p><strong>time:</strong> the current time (in hours). Numerical</p></li>
 </ul>
 <p>The following code includes a call for a data summary function as well as the head and tail of the data set.</p>
 <pre class="r"><code>#DATA DESCRIPTION Code
 
 #Calling data summary function that is included within the github.
 source(&#39;data summary.R&#39;)
-
 data.summary(bikeshare)</code></pre>
 <pre><code>##                 mean         sd  min      max  median length missing
 ## temp        20.23086   7.791590 0.82  41.0000  20.500  10886       0
