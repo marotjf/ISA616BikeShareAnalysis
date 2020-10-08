@@ -1,7 +1,6 @@
-## Manage Packages
+## Manage Packages using pacman librabry
 if(require(pacman)==FALSE) install.packages("pacman")
-pacman::p_load(readxl,fpp2,ggplot2,scales,dplyr, skimr, DataExplorer,corrplot, rpart, rpart.plot())
-
+pacman::p_load(readxl,fpp2,ggplot2,scales,dplyr, forecast, rsample, rpart, rpart.plot, ipred, caret, DT, deseasonalize )
 
 #Reading in the data
 setwd("M:/ISA 616/ISA616BikeShareAnalysis/BikeShare Workflow")
@@ -12,43 +11,44 @@ bikeshare <- read.csv("Bike Share Data.csv", stringsAsFactors = TRUE)
 
 #Data Description Code
 
+str(bikeshare)
+#calling data summary function that is within github
+source('data summary.R')
+data.summary(bikeshare)
 
-#Splitting date and time column into a separate date column and numeric time column
+#printing head and tail of data in table
+DT::datatable(head(bikeshare, 10))
+DT::datatable(tail(bikeshare, 10))
 
+#################################################################################
+
+#PREPROCESSING STEPS
+
+#Splitting date and time column into a separate numeric date column and numeric time column
 bikeshare$Date <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 1)
 bikeshare$Time <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 2)
 bikeshare$Date <- as.Date(bikeshare$datetime,format='%m/%d/%Y')
 bikeshare$Time <- as.factor(bikeshare$Time)
 bikeshare$Time <- as.numeric(bikeshare$Time)
 
+str(bikeshare)
+
 #recoding other variables as factors 
-bikeshare$quarter <- factor(bikeshare$season)
+bikeshare$quarter <- factor(bikeshare$season) #quarter is a more appropriate name for this variable
 bikeshare$holiday <- factor(bikeshare$holiday)
 bikeshare$workingday <- factor(bikeshare$workingday)
 bikeshare$weather <- factor(bikeshare$weather)
 
-#Removing original datetime column
-library(dplyr)
+#Removing original datetime column using select function in dplyr
 bikeshare<-select(bikeshare, -datetime)
 bikeshare<-select(bikeshare, -season)
 
-str(bikeshare)
 
-
-source('data summary.R')
-data.summary(bikeshare)
-
-#################################################################################
-
-#PREPROCESSING STEPS
-
-#Creating Dummies for Factors
+#Creating Dummy variables for multilevel Factors
 
 dum<-as.data.frame(model.matrix(~0+bikeshare$quarter))
 colnames(dum)<-c("1Q", "2Q", "3Q", "4Q")
 bikeshare<-cbind(bikeshare, dum[,-1])
-
-
 
 dum1<-as.data.frame(model.matrix(~0+bikeshare$weather))
 colnames(dum1)<-c("Clear", "Mist", "Light_SnowRain", "Heavy_SnowRain")
@@ -57,6 +57,29 @@ bikeshare<-cbind(bikeshare, dum1[,-1])
 bikeshare<-select(bikeshare, -quarter)
 bikeshare<-select(bikeshare, -weather)
 
+
+#Plotting Count over Days
+
+bikeshare$Date <- as.POSIXct.Date(bikeshare$Date) #using this variable just for the plot
+dfplot =data.frame(select(bikeshare,Date, count))
+
+PLOT<-function(x){
+  theme_set(theme_gray(base_size = 14))
+  label=colnames(x)[2]
+  g=ggplot(x, aes(Date, x[,2])) 
+  g=g+ geom_line()
+  g = g + scale_x_datetime(name = "Date", 
+                           breaks = date_breaks("70 days"),
+                           labels = date_format(format = "%b %d"),
+                           expand = c(0,0))
+  g=g+xlab("") + ylab(paste0("Count of Rentals",label))
+  print(g)
+}
+
+PLOT(dfplot)
+
+bikeshare<-select(bikeshare, -Time)
+bikeshare<-select(bikeshare, -Date)
 
 str(bikeshare)
 

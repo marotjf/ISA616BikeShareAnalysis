@@ -36,29 +36,9 @@ setwd("M:/ISA 616/ISA616BikeShareAnalysis/BikeShare Workflow")
 bikeshare <- read.csv("Bike Share Data.csv", stringsAsFactors = TRUE)
 ```
 
-```{r, echo=FALSE}
-
-bikeshare$Date <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 1)
-bikeshare$Time <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 2)
-bikeshare$Date <- as.Date(bikeshare$datetime,format='%m/%d/%Y')
-bikeshare$Time <- as.factor(bikeshare$Time)
-bikeshare$Time <- as.numeric(bikeshare$Time)
-
-#recoding other variables as factors 
-bikeshare$quarter <- factor(bikeshare$season)
-bikeshare$holiday <- factor(bikeshare$holiday)
-bikeshare$workingday <- factor(bikeshare$workingday)
-bikeshare$weather <- factor(bikeshare$weather)
-
-#Removing original datetime column
-library(dplyr)
-bikeshare<-select(bikeshare, -datetime)
-bikeshare<-select(bikeshare, -season)
-```
-
 # Data Description
 
-The source of this data set is the Capital BikeShare system which tracks over 500 different bike sharing programs and includes relevant attributes such as seasonal and weather information and membership status of riders. The data analyzed includes the total count of riders by hour and day, along with these additional attributes for bike rentals between the years 2011 and 2012.
+The source of this data set is the Capital BikeShare system which tracks over 500 different bike sharing programs and includes relevant attributes such as seasonal and weather information. The data analyzed includes the total count of riders by hour and day, along with these additional attributes for bike rentals between the years 2011 and 2012.
 
 * **Number of Observations:** _10,886_
 * **Missing Observations:** _0_
@@ -89,7 +69,7 @@ The source of this data set is the Capital BikeShare system which tracks over 50
 *	**count:** number of total rentals initiated (casual + registered).  Numerical
 
 
-The following code includes a call for a data summary function as well as the head and tail of the data set.
+The following code includes a call for a data summary function and prints the head and tail of the data set.
 
 ```{R} 
 #Calling data summary function that is included within the github.
@@ -111,40 +91,54 @@ DT::datatable(tail(bikeshare, 10))
 
 # Preprocessing
 
-Within the pre-processing phase, there was feature generation for a couple multilevel factors including season and weather. In addition, there was some previous pre-processing done involving the date and time column. In the original data file there is a datetime attribute. To allow for better modeling I split these into two separate columns and deleted the original datetime attribute. The code for this step was included in previous steps so that the data summary would be more accurate. Additionally, I defined one of the original attributes, season, becasue it included misleading values that didn't line up to the seasons but instead to quarters of the year.
-
-In terms of outlier removal, 3% of the observations were outliers. The outliers do not appear to be incorrectly measured data and do not affect model assumptions. Because of the relevance and variance provided from these observations I have decided to not eliminate the outliers.  
+The first step was to separate datetime into a separate date column and numeric time column. This will allow for the inclusion of either date or time, if one wanted to perform a time series analysis on the data. 
 
 
-I have included in the code below the steps I took to create dummy variables for the multilevel factors. 
+```{R} 
+bikeshare$Date <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 1)
+bikeshare$Time <- sapply(strsplit(as.character(bikeshare$datetime), " "), "[", 2)
+bikeshare$Date <- as.Date(bikeshare$datetime,format='%m/%d/%Y')
+bikeshare$Time <- as.factor(bikeshare$Time)
+bikeshare$Time <- as.numeric(bikeshare$Time)
+
+#Removing original datetime using select function in dplyr
+bikeshare<-select(bikeshare, -datetime)
+```
+
+Next, it was necessary to re-code the variables season, holiday, workingday, and weather as factors. Following this, I added dummy variables for weather and season and appended these to the data frame.
 
 ```{R}
+#recoding other variables as factors 
+bikeshare$season <- factor(bikeshare$season) 
+bikeshare$holiday <- factor(bikeshare$holiday)
+bikeshare$workingday <- factor(bikeshare$workingday)
+bikeshare$weather <- factor(bikeshare$weather)
 
-#Creating Dummy variables for multilevel Factors
-
-dum<-as.data.frame(model.matrix(~0+bikeshare$quarter))
-colnames(dum)<-c("1Q", "2Q", "3Q", "4Q")
-bikeshare<-cbind(bikeshare, dum[,-1])
-
-
-
+#creating dummy variables for weather
 dum1<-as.data.frame(model.matrix(~0+bikeshare$weather))
 colnames(dum1)<-c("Clear", "Mist", "Light_SnowRain", "Heavy_SnowRain")
 bikeshare<-cbind(bikeshare, dum1[,-1])
 
-bikeshare<-select(bikeshare, -quarter)
-bikeshare<-select(bikeshare, -weather)
+dum<-as.data.frame(model.matrix(~0+bikeshare$season))
+colnames(dum)<-c("Spring", "Summer", "Fall", "Winter")
+bikeshare<-cbind(bikeshare, dum[,-1])
 
+#Removing original weather variable
+bikeshare<-select(bikeshare, -weather)
+bikeshare<-select(bikeshare, -season)
 ```
 
+In terms of outlier removal, 3% of the observations were outliers. The outliers do not appear to be incorrectly measured data and do not affect model assumptions. Because of the relevance and variance provided from these observations I have decided to keep the outliers.  
+
+
+```{R, echo=FALSE} 
+boxplot(bikeshare$count)
+```
 # Model Selection and Output
 
-The first part of the model selection involved multiple regression analysis. This analysis was done so that the DownTown BikeSharing Company could more accurately predict the number of riders per day. The goal of this analysis is to provide DownTown BikeSharing with a model that they can utilize to better manage bike placement and maintenance. 
-
-The code below involves setting the seed and splitting the data into the training and validation set. 
+To avoid overfitting, I have partitioned the data. The code below involves setting the seed and splitting the data into the training set (70%  of data) and the validation set (30% of data).
 
 ```{r}
-#split into testing and validation
 set.seed(13)
 trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
 
@@ -155,25 +149,36 @@ bikeshare.valid<-bikeshare[-trainIndex, ]
 
 ## Multiple Regression Analysis
 
-### Predicting Total Count of Rentals
 
-The first multiple regression model will be used to predict the overall count of riders, which is the sum of casual and registered rides. Therefore we need to take casual and registered out of the data frame for the analysis because they cannot be predictors for count. In addition to this, the data includes time variables such as date, time, and quarter. However, because of the length of the data it could not apply a time series to these values. Within my analysis I will focus on other variables not related to a time series analysis such as the type of day and other weather characteristics.   
+The multiple regression model will be used to predict the overall count of riders, which is the sum of casual and registered rides. Therefore we need to take casual and registered out of the data frame for the analysis because they cannot be predictors for count. 
 
-```{r, echo=FALSE}
+```{r}
 bikeshare.train<-select(bikeshare.train, -registered)
 bikeshare.train<-select(bikeshare.train, -casual)
-
 bikeshare.valid<-select(bikeshare.valid, -registered)
 bikeshare.valid<-select(bikeshare.valid, -casual)
+```
 
+In addition to this, the data includes time variables such as date, time, and quarter. By looking at the plot below, one can see that there is significant monthly seasonality when looking at daily counts. To prevent the seasonality from affecting the model, I have removed the variables related to time.
+
+```{r, echo=FALSE}
+bikeshare.train<-select(bikeshare.train, -Time)
+bikeshare.train<-select(bikeshare.train, -Date)
+bikeshare.train<-select(bikeshare.train, -Summer)
+bikeshare.train<-select(bikeshare.train, -Fall)
+bikeshare.train<-select(bikeshare.train, -Winter)
+bikeshare.valid<-select(bikeshare.valid, -Time)
+bikeshare.valid<-select(bikeshare.valid, -Date)
+bikeshare.valid<-select(bikeshare.valid, -Summer)
+bikeshare.valid<-select(bikeshare.valid, -Fall)
+bikeshare.valid<-select(bikeshare.valid, -Winter)
 ```
 
 The below code includes the initial fitting of the model to all the available variables. The step-wise function then executes subsequently, using this full model as its upper range. Finally, the step-wise model outputs the optimal multiple regression equation and the values of the coefficients. 
 
 ```{r}
 #First fitting model with all variables available in training set
-full<-lm(count~ holiday+ workingday+ temp +atemp + humidity+ windspeed,data=bikeshare.train)
-
+full<-lm(count~ .,data=bikeshare.train)
 
 
 #Next using step-wise function to create multiple regression for total Count
@@ -182,72 +187,37 @@ lm.step<-step(null, scope=list(lower=null, upper=full), direction="both", trace=
 
 summary(lm.step)
 ```
+### Multiple Regression Evaluation
 
-The code and output below includes key metrics in which to evaluate the model on.
+Using a stepwise function yielded a model that uses humidity, Mist, atemp, and windspeed to predict the count of rentals. The adjusted R-squared for the model is 0.24, which shows no overfitting, yet is relatively low. Nonetheless, using a stepwise algorithm certifies that the model is using the optimal predictors based on a sequence of f-tests, so attempting to improve the adjusted R-squared is unneccessary. One can see that this model has an RMSE of 158.82 which means that on average, we would expect the error of a prediction using this model to be off by 158.82 daily bike rentals. This may seem like a large error, yet one must consider that some days have thousands of rentals.
 
-```{r}
+```{r, echo=FALSE}
 #Model Evaluation
 p.full<-predict(full, newdata=bikeshare.valid)
 p.step<-predict(lm.step, newdata=bikeshare.valid)
 
 accuracy(p.step, bikeshare.valid$count)
-
-
 ```
-When looking at the evaluation metrics for the model predicting total count, one can see that there is an improvement 
-
-### Predicting Count of Casual Rentals
-
-```{r}
-set.seed(13)
-trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
-
-
-bikeshare.train<-bikeshare[trainIndex, ]
-bikeshare.valid<-bikeshare[-trainIndex, ]
-
-
-bikeshare.train<-select(bikeshare.train, -count)
-bikeshare.valid<-select(bikeshare.valid, -count)
-
-full<-lm(casual~holiday+ workingday+ temp +atemp + humidity+ windspeed,data=bikeshare.train)
-
-
-null<-lm(bikeshare.train$casual~1, data=bikeshare.train)
-lm.step<-step(null, scope=list(lower=null, upper=full), direction="both", trace=0)
-summary(lm.step)
-
-```
-
-
-```{r}
-#Evaluate Model of Casual Count
-
-library(forecast)
-p.full<-predict(full, newdata=bikeshare.valid)
-p.step<-predict(lm.step, newdata=bikeshare.valid)
-
-
-accuracy(p.step, bikeshare.valid$casual)
-```
-
 
 
 ## Regression Tree Analysis
 
-### Predicting Count of Casual Rentals
+The regression tree analysis was done to drill down into the count of casual riders. 
+
 
 ```{r, echo=FALSE}
-#split into testing and validation
 set.seed(13)
-trainIndex = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
+trainIndex1 = sample(1:nrow(bikeshare), size = round(0.7*nrow(bikeshare)), replace=FALSE)
 
+str(bikeshare)
 
-bikeshare.train<-bikeshare[trainIndex, ]
-bikeshare.valid<-bikeshare[-trainIndex, ]
+bikeshare.train1<-bikeshare[trainIndex1, ]
+bikeshare.valid1<-bikeshare[-trainIndex1, ]
 
-bikeshare.train<-select(bikeshare.train, -count)
-bikeshare.valid<-select(bikeshare.valid, -count)
+bikeshare.train1<-select(bikeshare.train1, -count)
+bikeshare.valid1<-select(bikeshare.valid1, -count)
+bikeshare.train1<-select(bikeshare.train1, -registered)
+bikeshare.valid1<-select(bikeshare.valid1, -registered)
 
 ```
 
@@ -256,24 +226,23 @@ Creating regression tree algorithm.
 ```{r}
 
 m1 <- rpart(
-  formula = casual ~ holiday + workingday + temp + humidity + windspeed, 
-  data    = bikeshare.train,
+  formula = casual ~ ., 
+  data    = bikeshare.train1,
   method  = "anova"
 )
 rpart.plot(m1)
 ```
-Cross validating the regression tree with the cv bagged model which allows me to cross validate among different subsets of the training data.
+| 
 
+Cross validating the regression tree with the cv bagged model which allows me to cross validate among different folds of the training data.
 
 ```{r}
-#Validating the regression tree using the cv bagged model
-
 ctrl <- trainControl(method = "cv",  number = 10) 
 
 # CV bagged model
 bagged_cv <- train(
   casual ~ holiday + workingday + temp + humidity + windspeed,
-  data = bikeshare.train,
+  data = bikeshare.train1,
   method = "treebag",
   trControl = ctrl,
   importance = TRUE
@@ -288,26 +257,15 @@ Plotting the regressions tree determinance of importance among the different var
 
 ```{r}
 # plot most important variables
-plot(varImp(bagged_cv), 20) 
+plot(varImp(bagged_cv)) 
 ```
+### Regression Tree Evaluation
 
-As one can see, humidity, temperature, and workingday are the variables with the larest amount of importance within the regression tree analysis. Using this analysis to supplement the previous multiple regression analysis for the casual count will allow the marketing team at DownTown BikeSharing to understand exactly which days they should expect a large amount of casual bikers within the city. 
+As one can see, humidity, temperature, and workingday are the variables with the larest amount of importance within the regression tree analysis. Using this analysis to supplement the previous multiple regression analysis for the casual count will allow the marketing team at DTB to have a better understanding of which days they should expect a large amount of casual bikers within the city. Additionally, according to the RMSE, one can predict that when using the regression tree the prediction for casual rentals will have an average error of 33.15 rentals.
 
 
 # Conclusion
 
-In all, DownTown BikeSharing has the opportunity to utilize the mutiple regression models to improve upon maintenance and inventory planning. Using the overall count model, registered count, and casual count, DownTown BikeSharing can significantly decrease the RMSE when attempting to predict the amount of rentals when compared to a benchmark or full model. By using this model, Downtown BikeSharing can decide how many bikes to have available each day based on the predicted amount. This mitigates risk as to not have all the inventory on the streets every day. In addition, by not having the bikes out everyday, the company can perform maintenance during business hours. This will not only relieve the pain points of inventory management, but provide additional gains through cut costs.
-
-When using the regression tree and analysis on the most important variables, the marketing team can then begin to extend ads to casual riders in hopes that they are riding on a day where these variable conditions are present. For instance, on a working day with mid temperatures and low humidity, one can expect on average the largest amount of casual bikers. Because of this, it may be beneficial to place digital ads on social media targeted at casual riders on these days.This will ultimately increase profit due to membership fees and will increase customer retention.
-
-
-
-
-
-
-```{r}
-
-
-```
+In all, DTB has the opportunity to utilize the multiple regression model to improve upon operations and advertising. One considerable takeaway is the relationship between humidity and rentals. When holding the other variables constant, a one unit increase in the humidity will result in an average decrease of 2.789 riders. Within the regression tree analysis, one can see the association between humidity and casual rentals as well. This is shown with humidity being ranked as the most important variable in that analysis. It is interesting to note that a split on humidity of 50 in the regression tree caused a 45% difference in the number of casual rentals. Using this information, DTB may want to caution putting an excess amount of bikes out during extremely humid weather. Also, if DTB is looking to convert casual customers through promotions, they will want to avoid advertising these promotions on non-working days with high humidity and temperatures because the model predicts a low amount of casual rentals. Both strategies will allow for cost savings, as well as gains due to improved bike maintenance, customer retention, and more profitable customers. 
 
 
