@@ -1,0 +1,17 @@
+base
+pacman
+readxl
+fpp2
+ggplot2
+forecast
+fma
+expsmooth
+scales
+dplyr
+rsample
+rpart
+rpart.plot
+ipred
+lattice
+caret
+DT
