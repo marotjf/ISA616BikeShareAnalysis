@@ -19,13 +19,13 @@ knitr::opts_chunk$set(echo = TRUE,
 
 # Overview
 
-Within this document I will detail the process of how I developed two different models to help DownTown BikeSharing LLC. predict bike rentals on a daily basis. After I summarize the data and detail the pre-processing steps, I will delve into the models built, the output, and conclusions.
+Within this document I will detail the analysis that I have completed to assist the theoretical company DownTown Bikes (DTB). I have provided the company with a model to predict the the total count of bike rentals each day. My analysis also offers DTB the opportunity to drill down and predict the number of casual (non-registered) rentals per day, as well as what variables are most important in predicting this value. 
 
-The first part of the analysis includes multiple regression analysis. Due to maintenance costs and risk mitigation, it is advantageous for Downtown BikeSharing to better the predict the necessary amount of bikes to make available each day. Additionally, Downtown BikeSharing's marketing team is attempting to transform more casual riders into registered riders due to the high profitability and retention rate within the membership program. In order to do so, they have increased the marketing budget in terms of advertising towards casual riders. To assist in this effort, I developed a regression tree analysis using array of variables within the data set. This will allow for the marketing team to understand which days attract the most casual riders and to factor this into their marketing plan. I will provide more detail later in the analysis regarding the results of these analyses and their potential effects on DownTown BikeShare. 
+Due to maintenance costs and risk mitigation, it is advantageous for the DTB operations team to better predict the necessary amount of bikes to make available each day. To solve this problem, I utilized multiple regression analysis so that DTB can manage inventory more efficiently. Additionally, DTB's marketing team is attempting to convert more casual riders into registered riders. Using my model, the marketing team can better predict which days attract the most casual riders and tailor promotions based on this.
 
 
 ### Package Management and Loading Data
-The below code includes package management using pacman. If packman is necessary, it will load all the required packages to their version when used before a possible package update. 
+The below code contains package management using the library pacman. If pacman is required and is not yet installed, it will install the package. Then by using pacman one can call all the required packages and they will be the same version as used in this analysis. Following this is the code to load the data set. 
 
 ```{r}
 if(require(pacman)==FALSE) install.packages("pacman")
@@ -100,13 +100,14 @@ source('data summary.R')
 data.summary(bikeshare)
 
 ```
-##### Head
+
+##### Head of the data frame: 
 
 ```{R} 
 DT::datatable(head(bikeshare, 10))
 ```
 
-Tail:
+##### Tail of the data frame:
 
 ```{R} 
 DT::datatable(tail(bikeshare, 10))
